@@ -1,7 +1,7 @@
 import subprocess
 import os
 
-HOST_ROOT_DIR = "C:/Users/Ahmed/Desktop/1ULL"
+HOST_ROOT_DIR = "C:/Users/Ahmed/Desktop/pdb_examples"
 DOCKER_IMAGE = "andrpet/cocomaps-backend:0.0.19"
 CONTAINER_EXECUTION = "python /app/coco2/begin.py"
 INPUT_FILE_NAME = "example_input.json"
