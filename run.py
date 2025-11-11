@@ -1,15 +1,36 @@
 import subprocess
 import os
+import re
+from pathlib import Path
 
 HOST_ROOT_DIR = "C:/Users/Ahmed/Desktop/pdb_examples"
 DOCKER_IMAGE = "andrpet/cocomaps-backend:0.0.19"
 CONTAINER_EXECUTION = "python /app/coco2/begin.py"
 INPUT_FILE_NAME = "example_input.json"
 
-def run_frame_processing():
+def get_frame_numbers(root_dir):
+    frame_numbers = []
+    root_path = Path(root_dir)
+    
+    if not root_path.exists():
+        print(f"Warning: Directory {root_dir} does not exist.")
+        return frame_numbers
+    
+    #looking for folders matching frame_* pattern
+    for item in root_path.iterdir():
+        if item.is_dir():
+            match = re.match(r'frame_(\d+)', item.name)
+            if match:
+                frame_numbers.append(int(match.group(1)))
+    
+    return sorted(frame_numbers)
 
-    # Iterate from 1 up to (and including) 7
-    for i in range(1, 8):
+def run_frame_processing():
+    frame_numbers = get_frame_numbers(HOST_ROOT_DIR)
+    
+    print(f"Found {len(frame_numbers)} frame(s) to process: {frame_numbers}\n")
+    
+    for i in frame_numbers:
         frame_folder = f"frame_{i}"
         
         container_input_path = f"/app/data/{INPUT_FILE_NAME}"
@@ -34,4 +55,7 @@ def run_frame_processing():
             print(f"Output:\n{e.output}")
 
 if __name__ == "__main__":
-    run_frame_processing()
+    try:
+        run_frame_processing()
+    except Exception as e:
+        print(f"{e}")
