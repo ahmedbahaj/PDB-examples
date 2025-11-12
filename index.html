@@ -570,6 +570,7 @@
             <button class="chart-btn active" id="arcBtn" onclick="switchChart('arc')">Arc Diagram</button>
             <button class="chart-btn" id="chordBtn" onclick="switchChart('chord')">Chord Diagram</button>
             <button class="chart-btn" id="heatmapBtn" onclick="switchChart('heatmap')">Heatmap</button>
+            <button class="chart-btn" id="filteredHeatmapBtn" onclick="switchChart('filteredHeatmap')">Filtered Heatmap</button>
             <button class="chart-btn" id="areaBtn" onclick="switchChart('area')">Area Chart</button>
             <button class="chart-btn" id="lineBtn" onclick="switchChart('line')">Interaction Trends</button>
         </div>
@@ -883,6 +884,8 @@
                 updateChordDiagram(currentThreshold);
             } else if (currentChartType === 'heatmap') {
                 updateHeatmap();
+            } else if (currentChartType === 'filteredHeatmap') {
+                updateFilteredHeatmap(currentThreshold);
             } else if (currentChartType === 'area') {
                 updateAreaChart(useLogScale);
             } else if (currentChartType === 'line') {
@@ -1126,6 +1129,8 @@
                 updateChordDiagram(currentThreshold);
             } else if (currentChartType === 'heatmap') {
                 updateHeatmap();
+            } else if (currentChartType === 'filteredHeatmap') {
+                updateFilteredHeatmap(currentThreshold);
             }
         }
         
@@ -1143,6 +1148,8 @@
                 updateChordDiagram(currentThreshold);
             } else if (currentChartType === 'heatmap') {
                 updateHeatmap();
+            } else if (currentChartType === 'filteredHeatmap') {
+                updateFilteredHeatmap(currentThreshold);
             }
         }
         
@@ -1160,6 +1167,8 @@
                 updateChordDiagram(currentThreshold);
             } else if (currentChartType === 'heatmap') {
                 updateHeatmap();
+            } else if (currentChartType === 'filteredHeatmap') {
+                updateFilteredHeatmap(currentThreshold);
             }
         }
         
@@ -1582,6 +1591,7 @@
             document.getElementById('arcBtn').classList.toggle('active', type === 'arc');
             document.getElementById('chordBtn').classList.toggle('active', type === 'chord');
             document.getElementById('heatmapBtn').classList.toggle('active', type === 'heatmap');
+            document.getElementById('filteredHeatmapBtn').classList.toggle('active', type === 'filteredHeatmap');
             document.getElementById('areaBtn').classList.toggle('active', type === 'area');
             document.getElementById('lineBtn').classList.toggle('active', type === 'line');
             
@@ -1600,6 +1610,12 @@
                 arcLegend.style.display = 'block';
             } else if (type === 'heatmap') {
                 sliderControl.classList.add('hidden');
+                logScaleControl.classList.add('hidden');
+                colorSchemeControl.classList.remove('hidden');
+                interactionFilterControl.classList.remove('hidden');
+                arcLegend.style.display = 'none';
+            } else if (type === 'filteredHeatmap') {
+                sliderControl.classList.remove('hidden');
                 logScaleControl.classList.add('hidden');
                 colorSchemeControl.classList.remove('hidden');
                 interactionFilterControl.classList.remove('hidden');
@@ -1625,6 +1641,8 @@
                 updateChordDiagram(currentThreshold);
             } else if (type === 'heatmap') {
                 updateHeatmap();
+            } else if (type === 'filteredHeatmap') {
+                updateFilteredHeatmap(currentThreshold);
             } else if (type === 'area') {
                 updateAreaChart(useLogScale);
             } else if (type === 'line') {
@@ -1750,6 +1768,226 @@
                 },
                 colorAxis: {
                     min: 0,
+                    max: 1,
+                    stops: [
+                        [0, '#f5f5f7'],
+                        [0.3, '#90CAF9'],
+                        [0.5, '#42A5F5'],
+                        [0.7, '#1E88E5'],
+                        [1, '#0D47A1']
+                    ],
+                    labels: {
+                        formatter: function() {
+                            return Math.round(this.value * 100) + '%';
+                        },
+                        style: {
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            color: '#1d1d1f'
+                        }
+                    },
+                    minColor: '#f5f5f7',
+                    maxColor: '#0D47A1'
+                },
+                legend: {
+                    align: 'right',
+                    layout: 'vertical',
+                    verticalAlign: 'middle',
+                    symbolHeight: 300,
+                    symbolWidth: 20,
+                    title: {
+                        text: 'Consistency',
+                        style: {
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#1d1d1f'
+                        }
+                    },
+                    itemStyle: {
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: '#1d1d1f'
+                    }
+                },
+                plotOptions: {
+                    heatmap: {
+                        borderWidth: 1,
+                        borderColor: '#ffffff',
+                        dataLabels: {
+                            enabled: false
+                        },
+                        states: {
+                            hover: {
+                                brightness: 0.1,
+                                borderColor: '#1d1d1f',
+                                borderWidth: 2
+                            }
+                        }
+                    }
+                },
+                series: [{
+                    name: 'Interaction Consistency',
+                    data: heatmapData,
+                    turboThreshold: 10000
+                }],
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#d2d2d7',
+                    shadow: {
+                        color: 'rgba(0,0,0,0.1)',
+                        offsetX: 0,
+                        offsetY: 2,
+                        opacity: 0.15,
+                        width: 8
+                    },
+                    style: {
+                        fontSize: '14px',
+                        fontWeight: '400'
+                    },
+                    useHTML: true,
+                    formatter: function() {
+                        return `
+                            <div style="padding: 10px;">
+                                <div style="font-size: 15px; color: #1d1d1f; font-weight: 600; margin-bottom: 8px;">
+                                    ${this.point.name}
+                                </div>
+                                <div style="margin-bottom: 4px;">
+                                    <span style="color: #1d1d1f; font-weight: 600;">Consistency: ${Math.round(this.point.value * 100)}%</span>
+                                </div>
+                                <div style="margin-bottom: 4px;">
+                                    <span style="color: #6e6e73;">Frames: ${this.point.frameCount} / ${totalFrames}</span>
+                                </div>
+                                <div style="color: #6e6e73; font-size: 12px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #e8e8ed;">
+                                    ${this.point.types}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            });
+        }
+
+        // Update filtered heatmap with consistency threshold
+        function updateFilteredHeatmap(threshold) {
+            // Filter by threshold and interaction types
+            const filteredData = allInteractionsData.filter(d => {
+                if (d.consistency < threshold) return false;
+                if (selectedInteractionTypes.size === 0) return false;
+                const typesString = d.typesArray.join('; ');
+                return matchesSelectedTypes(typesString);
+            });
+            
+            // Get unique residues from Chain A and Chain B
+            const chainAResidues = new Set();
+            const chainBResidues = new Set();
+            
+            filteredData.forEach(interaction => {
+                chainAResidues.add(interaction.id1);
+                chainBResidues.add(interaction.id2);
+            });
+            
+            const chainAArray = Array.from(chainAResidues).sort((a, b) => {
+                const numA = parseInt(a.match(/\d+/)[0]);
+                const numB = parseInt(b.match(/\d+/)[0]);
+                return numA - numB;
+            });
+            
+            const chainBArray = Array.from(chainBResidues).sort((a, b) => {
+                const numA = parseInt(a.match(/\d+/)[0]);
+                const numB = parseInt(b.match(/\d+/)[0]);
+                return numA - numB;
+            });
+            
+            // Create heatmap data
+            const heatmapData = [];
+            filteredData.forEach(interaction => {
+                const xIndex = chainAArray.indexOf(interaction.id1);
+                const yIndex = chainBArray.indexOf(interaction.id2);
+                
+                if (xIndex !== -1 && yIndex !== -1) {
+                    heatmapData.push({
+                        x: xIndex,
+                        y: yIndex,
+                        value: interaction.consistency,
+                        name: `${interaction.id1} ↔ ${interaction.id2}`,
+                        types: interaction.typesArray.join('; '),
+                        frameCount: interaction.frameCount
+                    });
+                }
+            });
+            
+            document.getElementById('visibleInteractions').textContent = heatmapData.length;
+            
+            if (chart) {
+                chart.destroy();
+            }
+            
+            chart = Highcharts.chart('chartContainer', {
+                chart: {
+                    type: 'heatmap',
+                    backgroundColor: 'transparent',
+                    height: 800
+                },
+                title: {
+                    text: `Residue Interaction Heatmap (${heatmapData.length} interactions)`,
+                    style: {
+                        fontSize: '24px',
+                        fontWeight: '600',
+                        color: '#1d1d1f'
+                    }
+                },
+                subtitle: {
+                    text: `Chain A (X-axis) ↔ Chain B (Y-axis) | Threshold: ${Math.round(threshold * 100)}% | Color intensity = Consistency`,
+                    style: {
+                        fontSize: '17px',
+                        color: '#6e6e73'
+                    }
+                },
+                credits: {
+                    enabled: false
+                },
+                xAxis: {
+                    categories: chainAArray,
+                    title: {
+                        text: 'Chain A Residues',
+                        style: {
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            color: '#1d1d1f'
+                        }
+                    },
+                    labels: {
+                        rotation: -45,
+                        style: {
+                            fontSize: '11px',
+                            fontWeight: '500',
+                            color: '#1d1d1f'
+                        }
+                    }
+                },
+                yAxis: {
+                    categories: chainBArray,
+                    title: {
+                        text: 'Chain B Residues',
+                        style: {
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            color: '#1d1d1f'
+                        }
+                    },
+                    labels: {
+                        style: {
+                            fontSize: '11px',
+                            fontWeight: '500',
+                            color: '#1d1d1f'
+                        }
+                    },
+                    reversed: true
+                },
+                colorAxis: {
+                    min: threshold,
                     max: 1,
                     stops: [
                         [0, '#f5f5f7'],
@@ -2206,6 +2444,8 @@
                 updateChart(value);
             } else if (currentChartType === 'chord') {
                 updateChordDiagram(value);
+            } else if (currentChartType === 'filteredHeatmap') {
+                updateFilteredHeatmap(value);
             }
         });
 
@@ -2235,6 +2475,8 @@
                 updateChordDiagram(currentThreshold);
             } else if (currentChartType === 'heatmap') {
                 updateHeatmap();
+            } else if (currentChartType === 'filteredHeatmap') {
+                updateFilteredHeatmap(currentThreshold);
             } else if (currentChartType === 'area') {
                 updateAreaChart(useLogScale);
             } else if (currentChartType === 'line') {
