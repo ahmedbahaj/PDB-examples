@@ -1,0 +1,195 @@
+<template>
+  <div ref="chartContainer"></div>
+</template>
+
+<script setup>
+import { ref, onMounted, watch } from 'vue'
+import Highcharts from 'highcharts'
+import { useDataStore } from '../../stores/dataStore'
+import { COLOR_SCHEMES } from '../../utils/constants'
+
+const dataStore = useDataStore()
+const chartContainer = ref(null)
+let chart = null
+
+const updateChart = () => {
+  if (!chartContainer.value || !dataStore.trends || Object.keys(dataStore.trends).length === 0) return
+
+  const categories = Array.from({ length: dataStore.totalFrames }, (_, i) => `Frame ${i + 1}`)
+  const scheme = COLOR_SCHEMES[dataStore.currentColorScheme] || COLOR_SCHEMES.classic
+
+  const colorMap = {
+    'H-bonds': `rgb(${scheme['h-bond'].join(',')})`,
+    'Salt-bridges': `rgb(${scheme['salt-bridge'].join(',')})`,
+    'π-π interactions': `rgb(${scheme['pi-pi'].join(',')})`,
+    'Cation-π interactions': `rgb(${scheme['cation-anion-pi'].join(',')})`,
+    'Anion-π interactions': `rgb(${scheme['cation-anion-pi'].join(',')})`,
+    'CH-O/N bonds': `rgb(${scheme['ch-on'].join(',')})`,
+    'CH-π interactions': `rgb(${scheme['ch-on'].join(',')})`,
+    'Halogen bonds': `rgb(${scheme['halogen'].join(',')})`,
+    'Apolar vdW contacts': `rgb(${scheme['vdw'].join(',')})`,
+    'Polar vdW contacts': `rgb(${scheme['vdw'].join(',')})`,
+    'Proximal contacts': `rgb(${scheme['proximal'].join(',')})`,
+    'Clashes': `rgb(${scheme['clash'].join(',')})`
+  }
+
+  const series = []
+  for (const [type, data] of Object.entries(dataStore.trends)) {
+    const hasNonZero = data.some(value => value > 0)
+    if (hasNonZero) {
+      series.push({
+        name: type,
+        data: data,
+        color: colorMap[type] || `rgb(${scheme['h-bond'].join(',')})`,
+        lineWidth: 3,
+        marker: {
+          radius: 5,
+          lineWidth: 2,
+          lineColor: '#ffffff'
+        }
+      })
+    }
+  }
+
+  if (chart) {
+    chart.destroy()
+  }
+
+  chart = Highcharts.chart(chartContainer.value, {
+    chart: {
+      type: 'line',
+      backgroundColor: 'transparent',
+      height: 650
+    },
+    title: {
+      text: 'Interaction Type Trends Across Frames',
+      style: {
+        fontSize: '24px',
+        fontWeight: '600',
+        color: '#1d1d1f'
+      }
+    },
+    subtitle: {
+      text: `Number of Interactions vs Time${dataStore.useLogScale ? ' - Logarithmic Scale' : ''}`,
+      style: {
+        fontSize: '17px',
+        color: '#6e6e73'
+      }
+    },
+    credits: {
+      enabled: false
+    },
+    xAxis: {
+      categories: categories,
+      title: {
+        text: 'Time (Frames)',
+        style: {
+          fontSize: '15px',
+          fontWeight: '600',
+          color: '#1d1d1f'
+        }
+      },
+      labels: {
+        style: {
+          fontSize: '12px',
+          fontWeight: '500',
+          color: '#1d1d1f'
+        }
+      }
+    },
+    yAxis: {
+      type: dataStore.useLogScale ? 'logarithmic' : 'linear',
+      title: {
+        text: `Number of Interactions${dataStore.useLogScale ? ' - Log Scale' : ''}`,
+        style: {
+          fontSize: '15px',
+          fontWeight: '600',
+          color: '#1d1d1f'
+        }
+      },
+      labels: {
+        style: {
+          fontSize: '12px',
+          fontWeight: '500',
+          color: '#1d1d1f'
+        }
+      },
+      min: dataStore.useLogScale ? 0.1 : 0
+    },
+    legend: {
+      align: 'right',
+      verticalAlign: 'middle',
+      layout: 'vertical',
+      itemStyle: {
+        fontSize: '13px',
+        fontWeight: '500',
+        color: '#1d1d1f'
+      }
+    },
+    plotOptions: {
+      line: {
+        lineWidth: 3,
+        states: {
+          hover: {
+            lineWidth: 4
+          }
+        },
+        marker: {
+          enabled: true
+        }
+      }
+    },
+    series: series,
+    tooltip: {
+      backgroundColor: 'rgba(255, 255, 255, 0.98)',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#d2d2d7',
+      shared: true,
+      useHTML: true,
+      formatter: function() {
+        let html = `<div style="padding: 10px;">`
+        html += `<div style="font-size: 15px; color: #1d1d1f; font-weight: 600; margin-bottom: 8px;">${this.x}</div>`
+        
+        const sortedPoints = this.points.sort((a, b) => b.y - a.y)
+        sortedPoints.forEach(point => {
+          if (point.y > 0) {
+            html += `
+              <div style="margin-bottom: 4px;">
+                <span style="color: ${point.color}; font-weight: 600;">●</span>
+                <span style="color: #1d1d1f;">${point.series.name}: </span>
+                <span style="color: #1d1d1f; font-weight: 600;">${point.y}</span>
+              </div>
+            `
+          }
+        })
+        html += '</div>'
+        return html
+      }
+    }
+  })
+}
+
+onMounted(() => {
+  updateChart()
+})
+
+watch([
+  () => dataStore.currentChartType,
+  () => dataStore.trends,
+  () => dataStore.useLogScale,
+  () => dataStore.currentColorScheme
+], () => {
+  if (dataStore.currentChartType === 'line') {
+    updateChart()
+  }
+}, { deep: true })
+</script>
+
+<style scoped>
+div {
+  width: 100%;
+  height: 100%;
+}
+</style>
+

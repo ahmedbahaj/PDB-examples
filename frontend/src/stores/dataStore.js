@@ -1,0 +1,168 @@
+/**
+ * Pinia store for managing application data and state
+ */
+import { defineStore } from 'pinia'
+import api from '../services/api'
+import { matchesSelectedTypes } from '../utils/chartHelpers'
+import { INTERACTION_TYPES } from '../utils/constants'
+
+export const useDataStore = defineStore('data', {
+  state: () => ({
+    // Systems
+    systems: [],
+    currentSystem: null,
+    
+    // Data
+    interactions: [],
+    areaData: [],
+    trends: {},
+    
+    // UI State
+    currentChartType: 'arc',
+    currentThreshold: 0.6,
+    useLogScale: false,
+    selectedInteractionTypes: new Set(INTERACTION_TYPES.map(t => t.id)), // Select all by default
+    currentColorScheme: 'classic',
+    
+    // Loading states
+    loading: {
+      systems: false,
+      interactions: false,
+      area: false,
+      trends: false
+    },
+    
+    // Error states
+    errors: {
+      systems: null,
+      interactions: null,
+      area: null,
+      trends: null
+    }
+  }),
+
+  getters: {
+    totalFrames: (state) => {
+      return state.currentSystem?.frames || 0
+    },
+
+    filteredInteractions: (state) => {
+      return state.interactions.filter(d => {
+        if (d.consistency < state.currentThreshold) return false
+        if (state.selectedInteractionTypes.size === 0) return false
+        
+        // Check if any interaction types match
+        const typesString = d.typesArray.join('; ')
+        return matchesSelectedTypes(typesString, state.selectedInteractionTypes, INTERACTION_TYPES)
+      })
+    }
+  },
+
+  actions: {
+    // Systems
+    async loadSystems() {
+      this.loading.systems = true
+      this.errors.systems = null
+      try {
+        this.systems = await api.getSystems()
+      } catch (error) {
+        this.errors.systems = error.message
+        console.error('Error loading systems:', error)
+      } finally {
+        this.loading.systems = false
+      }
+    },
+
+    async setCurrentSystem(systemId) {
+      const system = this.systems.find(s => s.id === systemId)
+      if (system) {
+        this.currentSystem = system
+        // Load all data for the new system
+        await Promise.all([
+          this.loadInteractions(systemId),
+          this.loadAreaData(systemId),
+          this.loadTrends(systemId)
+        ])
+      }
+    },
+
+    // Data loading
+    async loadInteractions(systemId) {
+      this.loading.interactions = true
+      this.errors.interactions = null
+      try {
+        const data = await api.getInteractions(systemId)
+        this.interactions = data.interactions || []
+      } catch (error) {
+        this.errors.interactions = error.message
+        console.error('Error loading interactions:', error)
+      } finally {
+        this.loading.interactions = false
+      }
+    },
+
+    async loadAreaData(systemId) {
+      this.loading.area = true
+      this.errors.area = null
+      try {
+        const data = await api.getAreaData(systemId)
+        this.areaData = data.frames || []
+      } catch (error) {
+        this.errors.area = error.message
+        console.error('Error loading area data:', error)
+      } finally {
+        this.loading.area = false
+      }
+    },
+
+    async loadTrends(systemId) {
+      this.loading.trends = true
+      this.errors.trends = null
+      try {
+        const data = await api.getTrends(systemId)
+        this.trends = data.trends || {}
+      } catch (error) {
+        this.errors.trends = error.message
+        console.error('Error loading trends:', error)
+      } finally {
+        this.loading.trends = false
+      }
+    },
+
+    // UI State
+    setChartType(type) {
+      this.currentChartType = type
+    },
+
+    setThreshold(threshold) {
+      this.currentThreshold = threshold
+    },
+
+    setLogScale(useLog) {
+      this.useLogScale = useLog
+    },
+
+    toggleInteractionType(typeId) {
+      const updatedTypes = new Set(this.selectedInteractionTypes)
+      if (updatedTypes.has(typeId)) {
+        updatedTypes.delete(typeId)
+      } else {
+        updatedTypes.add(typeId)
+      }
+      this.selectedInteractionTypes = updatedTypes
+    },
+
+    selectAllInteractionTypes() {
+      this.selectedInteractionTypes = new Set(INTERACTION_TYPES.map(t => t.id))
+    },
+
+    clearInteractionTypes() {
+      this.selectedInteractionTypes = new Set()
+    },
+
+    setColorScheme(scheme) {
+      this.currentColorScheme = scheme
+    }
+  }
+})
+
