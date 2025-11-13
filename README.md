@@ -154,12 +154,3 @@ The built files will be in `frontend/dist/`
 This application was migrated from a single-file HTML application to a modern Vue.js + Flask architecture. The original `index.html` has been archived in the `archive/` folder.
 
 See `MIGRATION_SUMMARY.md` for detailed migration information.
-
-## 📄 License
-
-[Add your license here]
-
-## 🤝 Contributing
-
-[Add contribution guidelines here]
-
